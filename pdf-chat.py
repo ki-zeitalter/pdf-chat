@@ -25,7 +25,7 @@ def text_extrahieren(pdfDateien):
 
 def text_splitten(text):
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size = 500,
+        chunk_size = 2000,
         chunk_overlap  = 50,
         length_function = len,
     )
@@ -39,7 +39,7 @@ def erstelle_embeddings(textTeile):
 def conversation_chain(embeddings):
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     chain = ConversationalRetrievalChain.from_llm(
-        llm = ChatOpenAI(),
+        llm = ChatOpenAI(model_name='gpt-3.5-turbo-16k',  temperature=0),
         retriever = embeddings.as_retriever(),
         memory = memory
     )
@@ -76,20 +76,20 @@ def run():
 
         st.session_state.chain = conversation_chain(embeddings)
 
+    if "chain" in st.session_state:
+        prompt = st.text_input("Stelle eine Frage")
 
-    prompt = st.text_input("Stelle eine Frage")
+        if prompt:
+            antwort = st.session_state.chain({"question": prompt})
+            st.session_state.chat = antwort['chat_history']
 
-    if prompt:
-        antwort = st.session_state.chain({"question": prompt})
-        st.session_state.chat = antwort['chat_history']
-
-        for nachricht in st.session_state.chat:
-            if type(nachricht) is HumanMessage:
-                st.write(f"Du: {nachricht.content}")
-            if type(nachricht) is AIMessage:
-                st.write(f"AI: {nachricht.content}")
-            if type(nachricht) is SystemMessage:
-                st.write(f"System: {nachricht.content}")
+            for nachricht in st.session_state.chat:
+                if type(nachricht) is HumanMessage:
+                    st.write(f"Du: {nachricht.content}")
+                if type(nachricht) is AIMessage:
+                    st.write(f"AI: {nachricht.content}")
+                if type(nachricht) is SystemMessage:
+                    st.write(f"System: {nachricht.content}")
             
 
 if __name__ == '__main__':
