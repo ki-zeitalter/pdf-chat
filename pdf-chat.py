@@ -7,6 +7,7 @@ from langchain.vectorstores import FAISS
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chat_models import ChatOpenAI
+from langchain.schema.messages import HumanMessage, AIMessage, SystemMessage
 
 def setup():
     load_dotenv()
@@ -53,6 +54,9 @@ def run():
     if "chain" not in st.session_state:
         st.session_state.chain = None
 
+    if "chat" not in st.session_state:
+        st.session_state.chat = None
+
     st.set_page_config(page_title="Chat mit deinen PDF-Dateien 📘", page_icon="📘")
 
     st.header("Chat mit deinen PDF-Dateien 📘")
@@ -77,7 +81,16 @@ def run():
 
     if prompt:
         antwort = st.session_state.chain({"question": prompt})
-        st.write(antwort)
+        st.session_state.chat = antwort['chat_history']
+
+        for nachricht in st.session_state.chat:
+            if type(nachricht) is HumanMessage:
+                st.write(f"Du: {nachricht.content}")
+            if type(nachricht) is AIMessage:
+                st.write(f"AI: {nachricht.content}")
+            if type(nachricht) is SystemMessage:
+                st.write(f"System: {nachricht.content}")
+            
 
 if __name__ == '__main__':
     run()
