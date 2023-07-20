@@ -4,6 +4,9 @@ from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from langchain.chat_models import ChatOpenAI
 
 def setup():
     load_dotenv()
@@ -32,13 +35,14 @@ def text_splitten(text):
 def erstelle_embeddings(textTeile):
     return FAISS.from_texts(texts=textTeile, embedding=OpenAIEmbeddings())
 
-def suche(suchtext):
-    ergebnisse = st.session_state.embeddings.similarity_search(suchtext)
-
-    for ergebnis in ergebnisse:
-        st.write(ergebnis.page_content)
-        st.divider()
-
+def conversation_chain(embeddings):
+    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    chain = ConversationalRetrievalChain.from_llm(
+        llm = ChatOpenAI(),
+        retriever = embeddings.as_retriever(),
+        memory = memory
+    )
+    return chain
 
 def run():
     setup()
@@ -46,13 +50,16 @@ def run():
     if "embeddings" not in st.session_state:
         st.session_state.embeddings = None
 
-    st.set_page_config(page_title="Embeddings aus deinen PDF-Dateien 📘", page_icon="📘")
+    if "chain" not in st.session_state:
+        st.session_state.chain = None
 
-    st.header("Embeddings aus deinen PDF-Dateien 📘")
+    st.set_page_config(page_title="Chat mit deinen PDF-Dateien 📘", page_icon="📘")
 
-    pdf_dateien = st.file_uploader("PDF-Dateien hochladen (anschließend klicke auf 'Erstelle Embeddings')",type="pdf", accept_multiple_files=True)
+    st.header("Chat mit deinen PDF-Dateien 📘")
 
-    if st.button("Erstelle Embeddings"):
+    pdf_dateien = st.file_uploader("PDF-Dateien hochladen (anschließend klicke auf 'Verarbeite Dateien')",type="pdf", accept_multiple_files=True)
+
+    if st.button("Verarbeite Dateien"):
         text = text_extrahieren(pdf_dateien)
 
         text_teile = text_splitten(text)
@@ -63,11 +70,14 @@ def run():
 
         st.session_state.embeddings = embeddings
 
+        st.session_state.chain = conversation_chain(embeddings)
 
-    suchtext = st.text_input("Suche relevante Textstellen")
 
-    if suchtext:
-        suche(suchtext)
+    prompt = st.text_input("Stelle eine Frage")
+
+    if prompt:
+        antwort = st.session_state.chain({"question": prompt})
+        st.write(antwort)
 
 if __name__ == '__main__':
     run()
