@@ -45,7 +45,7 @@ def conversation_chain(embeddings):
     chain = ConversationalRetrievalChain.from_llm(
         llm=ChatOpenAI(model_name='gpt-3.5-turbo-16k',  temperature=0.3),
         retriever=embeddings.as_retriever(),
-        memory=memory
+        memory=memory, verbose=True
     )
     return chain
 
@@ -89,6 +89,7 @@ def run():
 
         if st.button("Chat löschen"):
             st.session_state.chat = []
+            st.session_state.chain.memory.clear()
 
         if prompt:
             antwort = st.session_state.chain({"question": prompt})
